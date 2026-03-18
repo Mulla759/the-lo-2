@@ -19,6 +19,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   validate:
     name: Validate code quality
@@ -53,12 +56,10 @@ jobs:
           EXIT_CODE=${EXIT_CODE:-0}
           cat expo-tunnel.log
 
-          # 124 = timeout (expected once the dev server is running)
           if [ "$EXIT_CODE" -ne 0 ] && [ "$EXIT_CODE" -ne 124 ]; then
             exit "$EXIT_CODE"
           fi
 
-          # Confirm Expo actually started and exposed a tunnel URL.
           if ! grep -Eq "exp://|Tunnel ready|Waiting on" expo-tunnel.log; then
             echo "Expo tunnel startup smoke check failed: no tunnel URL found in logs."
             exit 1
@@ -140,10 +141,8 @@ jobs:
 
           cat expo-ios-tunnel.log
 
-          # Accept normal startup timeout once Metro is running.
           if [ "$EXIT_CODE" -eq 0 ] || [ "$EXIT_CODE" -eq 124 ]; then
             true
-          # On CI, simulator URL-open can time out even when Metro+tunnel is healthy.
           elif grep -Eq "xcrun simctl openurl .* exited with non-zero code: 60" expo-ios-tunnel.log && grep -Eq "exp://" expo-ios-tunnel.log; then
             echo "Simulator open timed out, but Expo tunnel URL was generated; considering smoke test successful."
           else

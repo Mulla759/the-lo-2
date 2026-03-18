@@ -19,6 +19,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   validate:
     name: Build · Vet · Lint · Test
@@ -56,7 +59,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-          cache-dependency-path: backend/go.sum
+          cache: false
 
       - name: Download dependencies
         run: go mod download
@@ -75,9 +78,13 @@ jobs:
 
       - name: Run migrations
         run: |
-          for f in migrations/*.sql; do
-            PGPASSWORD=thelo_test psql -h localhost -U thelo -d thelo_test -f "$f"
-          done
+          if ls migrations/*.sql 1>/dev/null 2>&1; then
+            for f in migrations/*.sql; do
+              PGPASSWORD=thelo_test psql -h localhost -U thelo -d thelo_test -f "$f"
+            done
+          else
+            echo "No migration files found, skipping."
+          fi
 
       - name: Test
         run: go test -race -timeout 60s ./...
